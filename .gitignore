@@ -1,4 +1,9 @@
 # I/O Files
+*.npz
 *.npy
 *.root
 *.h5
+
+# Executables
+FlattenHits
+
