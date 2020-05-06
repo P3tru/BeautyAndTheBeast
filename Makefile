@@ -35,23 +35,31 @@ CPPFLAGS  +=  $(BOOSTCFLAGS)
 CPPFLAGS  +=  $(PYTHONCFLAGS)
 EXTRALIBS  = $(ROOTLIBS)
 EXTRALIBS += $(RATLIBS)
+EXTRALIBS += -lz
 EXTRALIBS += $(BOOSTLIBS)
-EXTRALIBS += -L$(PWD)/lib -lcnpy -lz
 EXTRALIBS += $(PYTHONLIBS)
 
 SRCS = $(wildcard $(SRCDIR)/*.cc)
 OBJS = $(subst .cc,.o,$(SRCS))
 
 .PHONY: all clean 
-.DEFAULT_GOAL = EventWrapper
+.DEFAULT_GOAL = FlattenHits
 
 help:
 	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 all: FlattenHits
 
+libcnpy.so: libcnpy.o
+	@echo "Compiling library $@"
+	$(CXX) $(CPPFLAGS) -shared $^ -o lib/$@ $(EXTRALIBS)
+	$(RM) $^
+libcnpy.o:
+	$(CXX) $(CPPFLAGS) -fPIC -c src/cnpy.cpp -o $@ $(EXTRALIBS)
+
+
 FlattenHits: FlattenHits.o $(OBJS)
-	$(CXX) $(CPPFLAGS) -o FlattenHits FlattenHits.cc $(OBJS) $(EXTRALIBS)
+	$(CXX) $(CPPFLAGS) -o FlattenHits FlattenHits.cc $(OBJS) $(EXTRALIBS) -L$(PWD)/lib -lcnpy
 	$(RM) FlattenHits.o $(OBJS)
 
 clean:
