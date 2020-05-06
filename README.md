@@ -15,5 +15,5 @@ python OffPDFs.py FLAT_output.npz -v -o PREFIX
 
 ## Step 3 : PROFIT!
 ```bash
-python OffRecon.py --TResPDF PREFIX_TRes_PDF.npy --CTPDF PREFIX_CTheta_PDF.npy -r  PREFIX_RIndex_PDF.npy -o FLAT_output.npz
+python OffRecon.py --TResPDF PREFIX_TRes_PDF.npy --CTPDF PREFIX_CTheta_PDF.npy -r  PREFIX_RIndex_PDF.npy -o PREFIX FLAT_output.npz
 ```
