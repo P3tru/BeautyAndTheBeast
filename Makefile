@@ -23,12 +23,12 @@ ROOTLIBS   := $(shell root-config --libs)
 RATLIBS  := -L$(RATROOT)/lib -lRATEvent
 
 ### BOOST
-BOOSTCFLAGS := -I/usr/include/boost/
-BOOSTLIBS   := -lboost_system -lboost_filesystem
+BOOSTCFLAGS := -I/data/snoplus/home/zsoldos/.local/boost-1.71.0
+BOOSTLIBS   := -L/data/snoplus/home/zsoldos/.local/boost-1.71.0/lib -lboost_system -lboost_filesystem
 
 ### Python
-PYTHONCFLAGS := $(shell python3.8-config --cflags)
-PYTHONLIBS   := $(shell python3.8-config --ldflags) -lpython3.8
+PYTHONCFLAGS := $(shell python3-config --cflags)
+PYTHONLIBS   := $(shell python3-config --ldflags)
 
 CPPFLAGS  += -I$(INCDIR) $(ROOTCFLAGS) -I$(RATROOT)/include
 CPPFLAGS  +=  $(BOOSTCFLAGS)
@@ -58,9 +58,9 @@ libcnpy.o:
 	$(CXX) $(CPPFLAGS) -fPIC -c src/cnpy.cpp -o $@ $(EXTRALIBS)
 
 
-FlattenHits: FlattenHits.o $(OBJS)
+FlattenHits: libcnpy.so FlattenHits.o $(OBJS)
 	$(CXX) $(CPPFLAGS) -o FlattenHits FlattenHits.cc $(OBJS) $(EXTRALIBS) -L$(PWD)/lib -lcnpy
 	$(RM) FlattenHits.o $(OBJS)
 
 clean:
-	$(RM) $(OBJS) FlattenHits
+	$(RM) $(OBJS) libcnpy.o FlattenHits
