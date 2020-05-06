@@ -1,6 +1,12 @@
 # BeautyAndTheBeast
 
 Reconstruct offline the events produced by rat-pac-*
+Works with ROOT 6, and prior one should source both ROOT and RATROOT libs. Then, an additional:
+```bash
+source SetROOTIncludePath.sh
+``` 
+is necessary.
+
 At the moment it's a 3 steps process:
 
 ## Step 1 : Flatten the hits
