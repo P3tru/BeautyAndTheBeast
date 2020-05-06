@@ -1,0 +1,58 @@
+# Basic Makefile
+
+### Compilers
+CC  = gcc
+CXX = g++
+
+DEBUG_LEVEL    = -g
+EXTRA_CCFLAGS  = -W -Wall
+CPPFLAGS       = $(DEBUG_LEVEL) $(EXTRA_CCFLAGS)
+CCFLAGS        = $(CPPFLAGS)
+
+RM = rm -f
+MV = mv
+
+SRCDIR := src
+INCDIR := include
+
+### ROOT
+ROOTCFLAGS := $(shell root-config --cflags)
+ROOTLIBS   := $(shell root-config --libs)
+
+### RAT
+RATLIBS  := -L$(RATROOT)/lib -lRATEvent
+
+### BOOST
+BOOSTCFLAGS := -I/usr/include/boost/
+BOOSTLIBS   := -lboost_system -lboost_filesystem
+
+### Python
+PYTHONCFLAGS := $(shell python3.8-config --cflags)
+PYTHONLIBS   := $(shell python3.8-config --ldflags) -lpython3.8
+
+CPPFLAGS  += -I$(INCDIR) $(ROOTCFLAGS) -I$(RATROOT)/include
+CPPFLAGS  +=  $(BOOSTCFLAGS)
+CPPFLAGS  +=  $(PYTHONCFLAGS)
+EXTRALIBS  = $(ROOTLIBS)
+EXTRALIBS += $(RATLIBS)
+EXTRALIBS += $(BOOSTLIBS)
+EXTRALIBS += -L$(PWD)/lib -lcnpy -lz
+EXTRALIBS += $(PYTHONLIBS)
+
+SRCS = $(wildcard $(SRCDIR)/*.cc)
+OBJS = $(subst .cc,.o,$(SRCS))
+
+.PHONY: all clean 
+.DEFAULT_GOAL = EventWrapper
+
+help:
+	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
+all: FlattenHits
+
+FlattenHits: FlattenHits.o $(OBJS)
+	$(CXX) $(CPPFLAGS) -o FlattenHits FlattenHits.cc $(OBJS) $(EXTRALIBS)
+	$(RM) FlattenHits.o $(OBJS)
+
+clean:
+	$(RM) $(OBJS) FlattenHits
