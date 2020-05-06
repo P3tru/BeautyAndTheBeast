@@ -53,3 +53,6 @@ file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.hh)
 #
 add_executable(FlattenHits FlattenHits.cc ${sources} ${headers})
 target_link_libraries(FlattenHits ${ROOT_LIBRARIES} ${Boost_LIBRARIES} -lRATEvent)
+
+add_executable(FillBackRATMC FillBackRATMC.cc ${sources} ${headers})
+target_link_libraries(FillBackRATMC ${ROOT_LIBRARIES} ${Boost_LIBRARIES} -lRATEvent)

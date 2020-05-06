@@ -62,5 +62,9 @@ FlattenHits: FlattenHits.o $(OBJS)
 	$(CXX) $(CPPFLAGS) -o FlattenHits FlattenHits.cc $(OBJS) $(EXTRALIBS) -L$(PWD)/lib -lcnpy
 	$(RM) FlattenHits.o $(OBJS)
 
+FillBackRATMC: FillBackRATMC.o $(OBJS)
+	$(CXX) $(CPPFLAGS) -o FillBackRATMC FillBackRATMC.cc $(OBJS) $(EXTRALIBS) -L$(PWD)/lib -lcnpy
+	$(RM) FillBackRATMC.o $(OBJS)
+
 clean:
-	$(RM) $(OBJS) FlattenHits
+	$(RM) $(OBJS) FlattenHits FillBackRATMC
