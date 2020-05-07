@@ -57,7 +57,7 @@ class Analyzer {
 
   void SetAnalyzer(const char *filename){
 
-	Analyzer::fMC = new TFile(filename);
+	Analyzer::fMC = new TFile(filename, "UPDATE");
 
 	if (Analyzer::fMC->IsOpen()) {
 
@@ -83,14 +83,14 @@ class Analyzer {
   }
 
   virtual ~Analyzer() {
-	fMC->Close();
-	delete fMC;
-
-	delete treeMC;
 	delete rds;
+	delete treeMC;
 
 	delete runTree;
 	delete run;
+
+	fMC->Close();
+	delete fMC;
 
   }
 

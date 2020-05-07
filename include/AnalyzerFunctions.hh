@@ -28,6 +28,10 @@ void AddFAnalyzers(vector<Analyzer*> *vFAnalyzer, const string& inputName, const
 // at iEvt (from MCTree)
 RAT::DS::MC * GetRATMCOnEvt(Analyzer *fAnalyzer, unsigned int iEvt=0);
 
+// Access the EV object from RAT
+// at iEvt (from MCTree) and trigger iEV
+RAT::DS::EV * GetRATEVOnEvt(Analyzer *fAnalyzer, unsigned int iEvt=0, unsigned iEV=0);
+
 // Fill vector<Hit> with MC Info
 vector<Hit> GetMCHitCollection(Analyzer *fAnalyzer, unsigned int iEvt=0, bool isSource=false);
 

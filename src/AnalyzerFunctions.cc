@@ -55,6 +55,16 @@ RAT::DS::MC * GetRATMCOnEvt(Analyzer *fAnalyzer, unsigned int iEvt){
 
 }
 
+RAT::DS::EV * GetRATEVOnEvt(Analyzer *fAnalyzer, unsigned int iEvt, unsigned iEV){
+
+  fAnalyzer->GetTreeMc()->GetEntry(iEvt);
+
+  // Access RAT MC info and the summary
+  // Summary useful to get nCer photons, nScint photons, etc...
+  return fAnalyzer->GetRds()->GetEV(iEV);
+
+}
+
 vector<Hit> GetMCHitCollection(Analyzer *fAnalyzer, unsigned int iEvt, bool isSource){
 
   RAT::DS::MC * mc = GetRATMCOnEvt(fAnalyzer, iEvt);
