@@ -4,13 +4,18 @@
 
 ///////////////////////// STL C/C++ /////////////////////////
 #include <csignal>
+#include <numeric>
+#include <climits>
 
 /////////////////////////   ROOT   //////////////////////////
 #include <TROOT.h>
 
+/////////////////////////   RAT    //////////////////////////
+#include <RAT/DS/EV.hh>
+
 /////////////////////////   USER   //////////////////////////
 #include "utils.hh"
-#include "FlattenHits.hh"
+#include "FillBackRATMC.hh"
 
 #include "Analyzer.hh"
 #include "AnalyzerFunctions.hh"
@@ -36,34 +41,24 @@ int main(int argc, char *argv[]) {
 
   // Input parameters
   // There's default value chosen by ternaries below
-  string inputName;
-  string outputName;
+  string inputRATName;
+  string inputFLATName;
 
   auto User_nEvts = INT_MIN;
   auto User_iEvt = INT_MIN;
 
-  auto isBatch = false;
+  auto isVerbose = false;
 
-  ProcessArgs(&theApp, &isBatch,
+  ProcessArgs(&theApp, &isVerbose,
 			  &User_nEvts, &User_iEvt,
-			  &inputName, &outputName);
-
-
-  const string outName = outputName.empty() ?
-						 ExtractFilenameFromPath(inputName) + "_FLAT.npz" : outputName;
+			  &inputRATName, &inputFLATName);
 
 
   // #### #### #### #### #### #### #### #### #### #### #### #### //
   // ####                CREATE ANALYZER                    #### //
   // #### #### #### #### #### #### #### #### #### #### #### #### //
 
-  auto FileAnalyzer = new Analyzer(inputName.c_str());
-
-
-  // #### #### #### #### #### #### #### #### #### #### #### #### //
-  // ####                   ANALYSIS                        #### //
-  // #### #### #### #### #### #### #### #### #### #### #### #### //
-
+  auto FileAnalyzer = new Analyzer(inputRATName.c_str());
   unsigned long nEvts = User_nEvts > INT_MIN && User_nEvts < FileAnalyzer->GetNEvts() ?
 						User_nEvts : FileAnalyzer->GetNEvts();
   unsigned long iEvt = SetDefValue(User_iEvt, 0);
@@ -71,27 +66,103 @@ int main(int argc, char *argv[]) {
   nEvts = nEvts > FileAnalyzer->GetNEvts() ? FileAnalyzer->GetNEvts() : nEvts;
   ProgressBar progressBar(nEvts, 70);
 
-  GetVHitAndDumpFlatNPZ(FileAnalyzer, iEvt, outName, "w");
-  iEvt++;
+
+  // #### #### #### #### #### #### #### #### #### #### #### #### //
+  // ####           LOOP AND FILL MAP USING MCID            #### //
+  // #### #### #### #### #### #### #### #### #### #### #### #### //
+
+  map<int, int> mEntry;
+
+  if(isVerbose)
+    cout << "Recovering EV object for each events" << endl;
 
   for(iEvt; iEvt<nEvts; iEvt++) {
-
-	if(EoF) break;
 
 	// record the tick
 	++progressBar;
 
-	GetVHitAndDumpFlatNPZ(FileAnalyzer, iEvt, outName);
+	auto mc = GetRATMCOnEvt(FileAnalyzer, iEvt);
+	mEntry[mc->GetID()] = iEvt;
 
-	// display the bar
-	if(!isBatch)
-	  progressBar.display();
+    if(isVerbose)
+      progressBar.display();
 
   }
 
-  cout << endl;
-  EoF = 1;
+  progressBar.done();
 
+  // #### #### #### #### #### #### #### #### #### #### #### #### //
+  // ####      FILL RECON DATA TO ORIGINAL RAT MC           #### //
+  // #### #### #### #### #### #### #### #### #### #### #### #### //
+
+  FileAnalyzer->GetTreeMc()->SetTreeIndex(0);
+
+  auto tOutput = new TTree("OffT", "Offline Recon EV Tree");
+  // auto PF = new RAT::DS::PathFit();
+  // auto bPathFit = tOutput->Branch("OffEV", "RAT::DS::PathFit", &PF);
+  auto OffEV = new RAT::DS::EV();
+  auto bPathFit = tOutput->Branch("OffEV", "RAT::DS::EV", &OffEV);
+
+  auto tFile = TFile::Open(inputFLATName.c_str());
+
+  double X, Y, Z, T, Theta, Phi;
+  Long64_t MCID;
+  auto TRecon = SetFlatTreeReader(tFile,
+								  X, Y, Z,
+								  T,
+								  Theta, Phi,
+								  MCID);
+
+  auto nReconEntries = TRecon->GetEntries();
+
+  nReconEntries = nReconEntries >= nEvts ? nEvts : nReconEntries;
+
+  ProgressBar progressBarRecon(nReconEntries, 70);
+
+  if(isVerbose)
+    cout << "Filling EV objects with Reconstructed variables" << endl;
+
+  for(auto iEntry=0; iEntry<nReconEntries; iEntry++){
+
+	// record the tick
+	++progressBarRecon;
+
+	tFile->cd();
+	TRecon->GetEntry(iEntry);
+
+	FileAnalyzer->GetFmc()->cd();
+	OffEV = GetRATEVOnEvt(FileAnalyzer, mEntry[MCID]);
+
+	OffEV->GetPathFit()->SetTime0(T);
+	OffEV->GetPathFit()->SetTime(T);
+
+	OffEV->GetPathFit()->SetPos0(TVector3(X, Y, Z));
+
+	TVector3 dir(0.,0.,1.);
+	dir.SetMagThetaPhi(1, Theta, Phi);
+	OffEV->GetPathFit()->SetDirection(dir);
+
+	bPathFit->Fill();
+	// OffEV->Clear();
+
+	if(isVerbose)
+	  progressBarRecon.display();
+
+  }
+
+  progressBarRecon.done();
+
+  delete TRecon;
+  tFile->Close();
+
+  auto OffEVFile = new TFile("OffEVFile.root", "RECREATE");
+  OffEVFile->cd();
+  tOutput->Write();
+  OffEVFile->Close();
+
+  FileAnalyzer->GetTreeMc()->AddFriend(tOutput);
+  FileAnalyzer->GetFmc()->Write();
+  FileAnalyzer->GetFmc()->Close();
 
   /////////////////////////
   // ...
