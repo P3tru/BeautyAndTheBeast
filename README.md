@@ -7,6 +7,7 @@ Then, an additional sourcing is necessary (ROOT_INCLUDE_PATH and LD_LIBRARY_PATH
 source SetROOTIncludePath.sh
 ```
 
+Each program also have a verbose (-v) option. 
 At the moment it's a ~~3~~ 4 steps process:
 
 ## Step 1 : Flatten the hits
@@ -16,7 +17,7 @@ At the moment it's a ~~3~~ 4 steps process:
 
 ## Step 2 : Create PDFs
 ```bash
-python OffPDFs.py FLAT_output.npz -v -o PREFIX
+python OffPDFs.py FLAT_output.npz -o PREFIX
 ```
 
 ## Step 3 : PROFIT!
@@ -26,5 +27,5 @@ python OffRecon.py FLAT_output.npz --TResPDF PREFIX_TRes_PDF.npy --CTPDF PREFIX_
 
 ## Step 4 : Rewrite new EV object inside original RAT file
 ```bash
-./FillBackRATMC -i--RAT output_from_rat.root -i--FLAT OUTPUT.root
+./FillBackRATMC -i--RAT output_from_rat.root -i--FLAT OUTPUT_RECON.root
 ```
