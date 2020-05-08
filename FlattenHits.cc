@@ -44,9 +44,10 @@ int main(int argc, char *argv[]) {
   auto User_nEvts = INT_MIN;
   auto User_iEvt = INT_MIN;
 
-  auto isBatch = false;
+  auto isVerbose = false;
+  auto isSource = false;
 
-  ProcessArgs(&theApp, &isBatch,
+  ProcessArgs(&theApp, &isVerbose, &isSource,
 			  &User_nEvts, &User_iEvt,
 			  &inputName, &outputName);
 
@@ -73,7 +74,7 @@ int main(int argc, char *argv[]) {
   nEvts = nEvts > FileAnalyzer->GetNEvts() ? FileAnalyzer->GetNEvts() : nEvts;
   ProgressBar progressBar(nEvts, 70);
 
-  GetVHitAndDumpFlatNPZ(FileAnalyzer, iEvt, outName, "w");
+  GetVHitAndDumpFlatNPZ(FileAnalyzer, iEvt, outName, "w", isSource);
   iEvt++;
 
   for(iEvt; iEvt<nEvts; iEvt++) {
@@ -83,13 +84,15 @@ int main(int argc, char *argv[]) {
 	// record the tick
 	++progressBar;
 
-	GetVHitAndDumpFlatNPZ(FileAnalyzer, iEvt, outName);
+	GetVHitAndDumpFlatNPZ(FileAnalyzer, iEvt, outName, "a", isSource);
 
 	// display the bar
-	if(!isBatch)
+	if(isVerbose)
 	  progressBar.display();
 
   }
+
+  progressBar.done();
 
   cout << endl;
   EoF = 1;

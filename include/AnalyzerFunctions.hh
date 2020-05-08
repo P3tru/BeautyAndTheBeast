@@ -41,6 +41,8 @@ vector<Hit> GetVHitsFromPart(Analyzer *fAnalyzer, unsigned int iEvt=0,
 							 vector<ComplexParticle> *vCPart = NULL);
 
 // Dump vector<Hit> inside a npz file
-void GetVHitAndDumpFlatNPZ(Analyzer *fAnalyzer, unsigned iEvt, const string& NPZName, const string& mode="a");
+void GetVHitAndDumpFlatNPZ(Analyzer *fAnalyzer, unsigned iEvt,
+						   const string& NPZName, const string& mode="a",
+						   bool isSource = false);
 
 #endif

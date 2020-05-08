@@ -25,7 +25,9 @@ void ShowUsage(string name){
 
 	   << "\t-h\tShow this help message\n"
 
-	   << "\t-b\tSet batch mode (don't show progress bar)\n"
+	   << "\t-v\tSet verbose mode\n"
+
+	   << "\t-t\tSet if tracks were recorded\n"
 
 	   << "\t-i\tinput  file (.root)\n"
 	   << "\t-o\toutput file (.npz)\n"
@@ -38,7 +40,7 @@ void ShowUsage(string name){
 }
 
 
-void ProcessArgs(TApplication *theApp, bool *isBatch,
+void ProcessArgs(TApplication *theApp, bool *isVerbose, bool *isSource,
 				 int *User_nEvts, int *User_iEvt,
 				 string *filename, string *outputname) {
 
@@ -54,8 +56,11 @@ void ProcessArgs(TApplication *theApp, bool *isBatch,
 	  ShowUsage(theApp->Argv(0));
 	  exit(0);
 
-	} else if (boost::iequals(arg, "-b")) {
-	  *isBatch = true;
+	} else if (boost::iequals(arg, "-v")) {
+	  *isVerbose = true;
+
+	} else if (boost::iequals(arg, "-t")) {
+	  *isSource = true;
 
 	} else if (boost::iequals(arg, "-NEvts")) {
 	  *User_nEvts = stoi(theApp->Argv(++i));

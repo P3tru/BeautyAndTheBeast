@@ -127,7 +127,10 @@ vector<Hit> GetMCHitCollection(Analyzer *fAnalyzer, unsigned int iEvt, bool isSo
 		// FILL EVENT //
 		// ########## //
 
-		vHit.emplace_back(Hit(PMTPos, Q, T));
+		vHit.emplace_back(Hit(PMTPos, Q, T,
+							  TVector3(0.,0.,0.),
+							  TVector3(0.,0.,0.),
+							  0, 0.));
 
 	  }
 
@@ -205,9 +208,11 @@ vector<Hit> GetVHitsFromPart(Analyzer *fAnalyzer, unsigned int iEvt,
 
 }
 
-void GetVHitAndDumpFlatNPZ(Analyzer *fAnalyzer, unsigned iEvt, const string& NPZName, const string& mode){
+void GetVHitAndDumpFlatNPZ(Analyzer *fAnalyzer, unsigned iEvt,
+						   const string& NPZName, const string& mode,
+						   bool isSource){
 
-  vector<Hit> vHit = GetMCHitCollection(fAnalyzer, iEvt, true);
+  vector<Hit> vHit = GetMCHitCollection(fAnalyzer, iEvt, isSource);
   auto MCID = GetRATMCOnEvt(fAnalyzer, iEvt)->GetID();
 
   const auto NHits = vHit.size();
