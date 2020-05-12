@@ -46,14 +46,23 @@ int main(int argc, char *argv[]) {
   string inputRATName;
   string inputFLATName;
 
+  string outputName;
+
   auto User_nEvts = INT_MIN;
   auto User_iEvt = INT_MIN;
+
+  auto User_mem = INT_MIN;
 
   auto isVerbose = false;
 
   ProcessArgs(&theApp, &isVerbose,
+			  &User_mem,
 			  &User_nEvts, &User_iEvt,
-			  &inputRATName, &inputFLATName);
+			  &inputRATName, &inputFLATName,
+			  &outputName);
+
+  const string outName = outputName.empty() ?
+						 ExtractFilenameFromPath(inputRATName) + "_WithRecon.root" : outputName;
 
 
   // #### #### #### #### #### #### #### #### #### #### #### #### //
@@ -89,8 +98,15 @@ int main(int argc, char *argv[]) {
   // #### #### #### #### #### #### #### #### #### #### #### #### //
 
   auto tOutput = new TTree("OffT", "T With Offline Recon");
-  auto BufDS = new RAT::DS::Root();
+  auto BufDS = GetDS(inputRATName.c_str(), iEvt);
+  AddReconInfo(BufDS,
+			   0,
+			   find_if(vpFlat.begin(), vpFlat.end(),
+					   [&](const pair<int, FlatRecon>& p){return p.first == mMCID[iEvt++];})->second);
   tOutput->Branch("OffDS", "RAT::DS::Root", &BufDS);
+  tOutput->Fill();
+
+  OpenAndWriteTree(outName.c_str(), "RECREATE", tOutput);
 
   if(isVerbose)
 	cout << "Writing recon info into DS object" << endl;
@@ -99,8 +115,9 @@ int main(int argc, char *argv[]) {
 
   unsigned long nBytes = 0;
 
+  const unsigned long userSize = SetDefValue(User_mem, 100);
   const unsigned long MBSize = 1e6;
-  const unsigned long bufferSize = 100*MBSize;
+  const unsigned long bufferSize = userSize*MBSize;
 
   for(iEvt; iEvt<nEvts; iEvt++){
 
@@ -121,13 +138,10 @@ int main(int argc, char *argv[]) {
 
 	if(nBytes > bufferSize){
 
-	  auto OffEVFile = TFile::Open("OffEVFile.root", "UPDATE");
-	  tOutput->Write(nullptr,TObject::kWriteDelete,0);
-	  // delete tOutput;
-	  OffEVFile->Close("R");
-	  delete OffEVFile;
+	  OpenAndWriteTree(outName.c_str(), "UPDATE", tOutput);
 
 	  nBytes = 0;
+
 	}
 
 	if(isVerbose)
@@ -138,10 +152,7 @@ int main(int argc, char *argv[]) {
   if(isVerbose)
 	progressBarRecon.done();
 
-  auto OffEVFile = TFile::Open("OffEVFile.root", "UPDATE");
-  tOutput->Write(nullptr,TObject::kWriteDelete,0);
-  OffEVFile->Close("R");
-  delete OffEVFile;
+  OpenAndWriteTree(outName.c_str(), "UPDATE", tOutput);
 
   /////////////////////////
   // ...

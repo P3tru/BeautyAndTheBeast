@@ -187,14 +187,26 @@ RAT::DS::Root *GetDS(const char *fRATName, unsigned long iEvt, int *nBytes = nul
 
 }
 
+void OpenAndWriteTree(const char *fName, const char *mode, TTree *T){
+
+  auto OffEVFile = TFile::Open(fName, mode);
+  T->Write(nullptr,TObject::kWriteDelete,0);
+  // delete tOutput;
+  OffEVFile->Close("R");
+  delete OffEVFile;
+
+}
+
 void ShowUsage(string name){
 
-  cerr << "Usage: " << name << " <option(s)> -i FILE.root -o FILE.npz" << endl
+  cerr << "Usage: " << name << " <option(s)> -i--RAT FILE.root -i--FLAT FILE_RECON.root" << endl
 	   << "Options:\n"
 
 	   << "\t-h\tShow this help message\n"
 
 	   << "\t-v\tSet verbose mode\n"
+
+	   << "\t-mem\tSet memory buffer size in MB (default 100) (int)\n"
 
 	   << "\t-i--RAT\tinput RAT file (.root)\n"
 	   << "\t-i--FLAT\tinput RECON file (.root)\n"
@@ -202,14 +214,18 @@ void ShowUsage(string name){
 	   << "\t-NEvts\tNEvts to process (int)\n"
 	   << "\t-iEvt\tStart at Evt #i (int)\n"
 
+	   << "\t-o\toutput RAT file (.root)\n"
+
 	   << endl;
 
 }
 
 
 void ProcessArgs(TApplication *theApp, bool *isVerbose,
+				 int *User_mem,
 				 int *User_nEvts, int *User_iEvt,
-				 string *inputRATName, string *inputFLATName) {
+				 string *inputRATName, string *inputFLATName,
+				 string *outputName) {
 
   // Reading user input parameters
   if (theApp->Argc() < 2) {
@@ -226,6 +242,9 @@ void ProcessArgs(TApplication *theApp, bool *isVerbose,
 	} else if (boost::iequals(arg, "-v")) {
 	  *isVerbose = true;
 
+	} else if (boost::iequals(arg, "-mem")) {
+	  *User_mem = stoi(theApp->Argv(++i));
+
 	} else if (boost::iequals(arg, "-NEvts")) {
 	  *User_nEvts = stoi(theApp->Argv(++i));
 
@@ -237,6 +256,9 @@ void ProcessArgs(TApplication *theApp, bool *isVerbose,
 
 	} else if (boost::iequals(arg,"-i--FLAT")) {
 	  *inputFLATName = theApp->Argv(++i);
+
+	} else if (boost::iequals(arg,"-o")) {
+	  *outputName = theApp->Argv(++i);
 
 	} else {
 	  cout << "Unkown parameter" << endl;
