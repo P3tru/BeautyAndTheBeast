@@ -12,6 +12,7 @@
 
 /////////////////////////   RAT    //////////////////////////
 #include <RAT/DS/EV.hh>
+#include <RAT/DS/Root.hh>
 
 /////////////////////////   USER   //////////////////////////
 #include "utils.hh"
@@ -64,105 +65,74 @@ int main(int argc, char *argv[]) {
   unsigned long iEvt = SetDefValue(User_iEvt, 0);
   nEvts = iEvt > 0 ? iEvt + nEvts : nEvts;
   nEvts = nEvts > FileAnalyzer->GetNEvts() ? FileAnalyzer->GetNEvts() : nEvts;
-  ProgressBar progressBar(nEvts, 70);
+
+  // #### #### #### #### #### #### #### #### #### #### #### #### //
+  // ####           LOOP AND FILL MAP USING MCID            #### //
+  // #### #### #### #### #### #### #### #### #### #### #### #### //
+
+  map<int, int> mMCID
+	  = GetMAssociatedIDAndEvt(FileAnalyzer, iEvt, nEvts, isVerbose);
+  delete FileAnalyzer;
 
 
   // #### #### #### #### #### #### #### #### #### #### #### #### //
   // ####           LOOP AND FILL MAP USING MCID            #### //
   // #### #### #### #### #### #### #### #### #### #### #### #### //
 
-  map<int, int> mEntry;
+  std::vector< pair<int, FlatRecon> > vpFlat
+	  = GetVAssociatedIDAndRecon(inputFLATName.c_str(), isVerbose);
 
-  if(isVerbose)
-    cout << "Recovering EV object for each events" << endl;
-
-  for(iEvt; iEvt<nEvts; iEvt++) {
-
-	// record the tick
-	++progressBar;
-
-	auto mc = GetRATMCOnEvt(FileAnalyzer, iEvt);
-	mEntry[mc->GetID()] = iEvt;
-
-    if(isVerbose)
-      progressBar.display();
-
-  }
-
-  progressBar.done();
 
   // #### #### #### #### #### #### #### #### #### #### #### #### //
   // ####      FILL RECON DATA TO ORIGINAL RAT MC           #### //
   // #### #### #### #### #### #### #### #### #### #### #### #### //
 
-  FileAnalyzer->GetTreeMc()->SetTreeIndex(0);
-
-  auto tOutput = new TTree("OffT", "Offline Recon EV Tree");
-  // auto PF = new RAT::DS::PathFit();
-  // auto bPathFit = tOutput->Branch("OffEV", "RAT::DS::PathFit", &PF);
-  auto OffEV = new RAT::DS::EV();
-  auto bPathFit = tOutput->Branch("OffEV", "RAT::DS::EV", &OffEV);
-
-  auto tFile = TFile::Open(inputFLATName.c_str());
-
-  double X, Y, Z, T, Theta, Phi;
-  Long64_t MCID;
-  auto TRecon = SetFlatTreeReader(tFile,
-								  X, Y, Z,
-								  T,
-								  Theta, Phi,
-								  MCID);
-
-  auto nReconEntries = TRecon->GetEntries();
-
-  nReconEntries = nReconEntries >= nEvts ? nEvts : nReconEntries;
-
-  ProgressBar progressBarRecon(nReconEntries, 70);
+  auto tOutput = new TTree("OffT", "T With Offline Recon");
+  auto OffDS = new RAT::DS::Root();
+  tOutput->Branch("OffDS", "RAT::DS::Root", &OffDS);
 
   if(isVerbose)
-    cout << "Filling EV objects with Reconstructed variables" << endl;
+	cout << "Writing recon info into DS object" << endl;
 
-  for(auto iEntry=0; iEntry<nReconEntries; iEntry++){
+  ProgressBar progressBarRecon(nEvts, 70);
+
+  for(iEvt; iEvt<nEvts; iEvt++){
 
 	// record the tick
 	++progressBarRecon;
 
-	tFile->cd();
-	TRecon->GetEntry(iEntry);
+	auto fMC = TFile::Open(inputRATName.c_str());
+	auto fMCTree = dynamic_cast<TTree *>(fMC->Get("T"));
+	auto BufDS = new RAT::DS::Root();
+	fMCTree->SetBranchAddress("ds", &BufDS);
+	fMCTree->GetEntry(iEvt);
 
-	FileAnalyzer->GetFmc()->cd();
-	OffEV = GetRATEVOnEvt(FileAnalyzer, mEntry[MCID]);
+	fMC->Close();
+	delete fMC;
 
-	OffEV->GetPathFit()->SetTime0(T);
-	OffEV->GetPathFit()->SetTime(T);
+	AddReconInfo(BufDS,
+				 0,
+				 find_if(vpFlat.begin(), vpFlat.end(),
+						 [&](const pair<int, FlatRecon>& p){return p.first == mMCID[iEvt];})->second);
 
-	OffEV->GetPathFit()->SetPos0(TVector3(X, Y, Z));
+	tOutput->SetBranchAddress("OffDS", &BufDS, nullptr);
+	int errcode = tOutput->Fill();
+	tOutput->SetBranchAddress("OffDS", &OffDS, nullptr);
 
-	TVector3 dir(0.,0.,1.);
-	dir.SetMagThetaPhi(1, Theta, Phi);
-	OffEV->GetPathFit()->SetDirection(dir);
-
-	bPathFit->Fill();
-	// OffEV->Clear();
 
 	if(isVerbose)
 	  progressBarRecon.display();
 
   }
 
-  progressBarRecon.done();
+  if(isVerbose)
+	progressBarRecon.done();
 
-  delete TRecon;
-  tFile->Close();
+  // delete fA;
 
   auto OffEVFile = new TFile("OffEVFile.root", "RECREATE");
-  OffEVFile->cd();
   tOutput->Write();
   OffEVFile->Close();
-
-  FileAnalyzer->GetTreeMc()->AddFriend(tOutput);
-  FileAnalyzer->GetFmc()->Write();
-  FileAnalyzer->GetFmc()->Close();
 
   /////////////////////////
   // ...

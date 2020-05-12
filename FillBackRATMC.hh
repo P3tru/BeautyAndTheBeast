@@ -19,6 +19,11 @@
 /////////////////////////   USER  ///////////////////////////
 #include "utils.hh"
 
+#include "Analyzer.hh"
+#include "AnalyzerFunctions.hh"
+
+#include "ProgressBar.hpp"
+
 class OffEV : public TObject {
 
  public:
@@ -30,26 +35,139 @@ class OffEV : public TObject {
 
 };
 
+typedef struct {double X, Y, Z, T, Theta, Phi;} FlatRecon;
 
 TTree* SetFlatTreeReader(TFile *tFile,
-						 double &X, double &Y, double &Z,
-						 double &T,
-						 double &Theta, double &Phi,
+						 FlatRecon &fRecon,
 						 Long64_t &MCID){
 
   auto tTree = (TTree*)tFile->Get("Recon");
 
-  tTree->SetBranchAddress("X", &X);
-  tTree->SetBranchAddress("Y", &Y);
-  tTree->SetBranchAddress("Z", &Z);
-  tTree->SetBranchAddress("T", &T);
-  tTree->SetBranchAddress("Theta", &Theta);
-  tTree->SetBranchAddress("Phi", &Phi);
+  tTree->SetBranchAddress("X", &fRecon.X);
+  tTree->SetBranchAddress("Y", &fRecon.Y);
+  tTree->SetBranchAddress("Z", &fRecon.Z);
+  tTree->SetBranchAddress("T", &fRecon.T);
+  tTree->SetBranchAddress("Theta", &fRecon.Theta);
+  tTree->SetBranchAddress("Phi", &fRecon.Phi);
   tTree->SetBranchAddress("MCID", &MCID);
 
   return tTree;
 
 };
+
+void SetMC(RAT::DS::MC *MC, RAT::DS::MC *cMC){
+
+  MC->SetID(cMC->GetID());
+  MC->SetUTC(cMC->GetUTC());
+
+  for(auto iPart=0; iPart<cMC->GetMCParticleCount(); iPart++){
+    auto mcPart = MC->AddNewMCParticle();
+    mcPart = dynamic_cast<RAT::DS::MCParticle *>(cMC->GetMCParticle(iPart)->Clone());
+  }
+
+  for(auto iPart=0; iPart<cMC->GetMCParentCount(); iPart++){
+    auto mcPart = MC->AddNewMCParent();
+    mcPart = dynamic_cast<RAT::DS::MCParticle *>(cMC->GetMCParent(iPart)->Clone());
+  }
+
+}
+
+map<int, int> GetMAssociatedIDAndEvt(Analyzer *fA,
+									 unsigned long iEvt, unsigned long nEvts, bool isVerbose){
+
+  map<int, int> mMCID;
+
+  if(isVerbose)
+	cout << "Recovering DS address for each events" << endl;
+
+  ProgressBar progressBar(nEvts, 70);
+
+  for(iEvt; iEvt<nEvts; iEvt++) {
+
+	// record the tick
+	++progressBar;
+
+	auto mc = GetRATMCOnEvt(fA, iEvt);
+	mMCID[iEvt] = mc->GetID();
+
+	if(isVerbose)
+	  progressBar.display();
+
+  }
+
+  if(isVerbose)
+	progressBar.done();
+
+  return mMCID;
+
+};
+
+void AddReconInfo(RAT::DS::Root *DS, int iEV, FlatRecon fRecon){
+
+  DS->GetEV(iEV)->GetPathFit()->SetTime(fRecon.T);
+  DS->GetEV(iEV)->GetPathFit()->SetTime0(fRecon.T);
+  DS->GetEV(iEV)->GetPathFit()->SetPos0(TVector3(fRecon.X, fRecon.Y, fRecon.Z));
+  DS->GetEV(iEV)->GetPathFit()->SetPosition(TVector3(fRecon.X, fRecon.Y, fRecon.Z));
+  TVector3 dir(1., 0. ,0.);
+  dir.SetTheta(fRecon.Theta);
+  dir.SetPhi(fRecon.Phi);
+  dir.SetMag(1);
+  DS->GetEV(iEV)->GetPathFit()->SetDirection(dir);
+
+}
+
+vector< pair<int, FlatRecon> > GetVAssociatedIDAndRecon(const char *fFLAT, bool isVerbose){
+
+  vector< pair<int, FlatRecon> > vpFlat;
+
+  auto tFile = TFile::Open(fFLAT);
+
+  FlatRecon fRecon;
+  Long64_t MCID;
+  auto TRecon = SetFlatTreeReader(tFile,
+								  fRecon,
+								  MCID);
+
+  auto nReconEntries = TRecon->GetEntries();
+
+  for(auto iEntry=0; iEntry<nReconEntries; iEntry++) {
+
+	TRecon->GetEntry(iEntry);
+	vpFlat.emplace_back(make_pair(MCID, fRecon));
+
+  }
+
+  delete tFile;
+
+  return vpFlat;
+
+}
+
+void ReadAndFillEvt(const char *fMC,
+					unsigned long iEvt,
+					unsigned nEV,
+					FlatRecon vfRecon,
+					RAT::DS::Root *DS){
+
+  auto fA = new Analyzer(fMC);
+  auto mc = GetRATMCOnEvt(fA, iEvt);
+  DS = dynamic_cast<RAT::DS::Root *>(fA->GetDS()->Clone());
+
+  delete fA;
+
+  cout << DS->GetRunID() << endl;
+
+  cout << vfRecon.X << " ";
+  cout << vfRecon.Y << " ";
+  cout << vfRecon.Z << endl;
+
+  // for(auto iEV=0; iEV<nEV; iEV++){
+  AddReconInfo(DS, 0, vfRecon);
+  // }
+
+  // tOutput->Fill();
+
+}
 
 void ShowUsage(string name){
 
