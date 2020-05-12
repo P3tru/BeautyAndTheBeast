@@ -4,6 +4,11 @@
 *.root
 *.h5
 
+# Prints
+*.pdf
+*.png
+*.jpg
+
 # Executables
 FlattenHits
 FillBackRATMC
