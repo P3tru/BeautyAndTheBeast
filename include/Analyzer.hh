@@ -82,45 +82,36 @@ class Analyzer {
 
   }
 
+  void ClosefMC() {
+
+	fMC->Close();
+
+  }
+
   virtual ~Analyzer() {
+
 	delete rds;
 	delete treeMC;
 
 	delete runTree;
 	delete run;
 
-	fMC->Close();
+	ClosefMC();
 	delete fMC;
 
   }
 
-  TFile *GetFmc() const {
-	return fMC;
-  }
-  TTree *GetTreeMc() const {
-	return treeMC;
-  }
-  RAT::DS::Root *GetRds() const {
-	return rds;
-  }
+  TFile *GetfMC() const { return fMC; }
+  TTree *GetTree() const { return treeMC; }
+  RAT::DS::Root *GetDS() const { return rds; }
 
-  unsigned long GetNEvts() const {
-	return nEvts;
-  }
+  unsigned long GetNEvts() const { return nEvts; }
 
-  RAT::DS::Run *GetRun() const {
-	return run;
-  }
-  TTree *GetRunTree() const {
-	return runTree;
-  }
+  RAT::DS::Run *GetRun() const { return run; }
+  TTree *GetRunTree() const { return runTree; }
 
-  const string &GetTag() const {
-	return tag;
-  }
-  void SetTag(const string &tag) {
-	Analyzer::tag = tag;
-  }
+  const string &GetTag() const { return tag; }
+  void SetTag(const string &tag) { Analyzer::tag = tag; }
 
 };
 

@@ -47,21 +47,21 @@ void AddFAnalyzers(vector<Analyzer*> *vFAnalyzer, const string& inputName, const
 
 RAT::DS::MC * GetRATMCOnEvt(Analyzer *fAnalyzer, unsigned int iEvt){
 
-  fAnalyzer->GetTreeMc()->GetEntry(iEvt);
+  fAnalyzer->GetTree()->GetEntry(iEvt);
 
   // Access RAT MC info and the summary
   // Summary useful to get nCer photons, nScint photons, etc...
-  return fAnalyzer->GetRds()->GetMC();
+  return fAnalyzer->GetDS()->GetMC();
 
 }
 
 RAT::DS::EV * GetRATEVOnEvt(Analyzer *fAnalyzer, unsigned int iEvt, unsigned iEV){
 
-  fAnalyzer->GetTreeMc()->GetEntry(iEvt);
+  fAnalyzer->GetTree()->GetEntry(iEvt);
 
   // Access RAT MC info and the summary
   // Summary useful to get nCer photons, nScint photons, etc...
-  return fAnalyzer->GetRds()->GetEV(iEV);
+  return fAnalyzer->GetDS()->GetEV(iEV);
 
 }
 
