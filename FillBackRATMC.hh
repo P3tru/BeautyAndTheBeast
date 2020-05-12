@@ -169,6 +169,24 @@ void ReadAndFillEvt(const char *fMC,
 
 }
 
+RAT::DS::Root *GetDS(const char *fRATName, unsigned long iEvt, int *nBytes = nullptr){
+
+  auto fMC = TFile::Open(fRATName, "READ");
+  auto fMCTree = dynamic_cast<TTree *>(fMC->Get("T"));
+  auto BufDS = new RAT::DS::Root();
+  fMCTree->SetBranchAddress("ds", &BufDS);
+  int nBytesBuf = fMCTree->GetEntry(iEvt);
+
+  fMC->Close();
+  delete fMC;
+
+  if(nBytes)
+    *nBytes = nBytesBuf;
+
+  return BufDS;
+
+}
+
 void ShowUsage(string name){
 
   cerr << "Usage: " << name << " <option(s)> -i FILE.root -o FILE.npz" << endl

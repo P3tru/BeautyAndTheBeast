@@ -4,6 +4,7 @@
 
 ///////////////////////// STL C/C++ /////////////////////////
 #include <csignal>
+#include <memory>
 #include <numeric>
 #include <climits>
 
@@ -79,7 +80,7 @@ int main(int argc, char *argv[]) {
   // ####           LOOP AND FILL MAP USING MCID            #### //
   // #### #### #### #### #### #### #### #### #### #### #### #### //
 
-  std::vector< pair<int, FlatRecon> > vpFlat
+  vector< pair<int, FlatRecon> > vpFlat
 	  = GetVAssociatedIDAndRecon(inputFLATName.c_str(), isVerbose);
 
 
@@ -88,27 +89,27 @@ int main(int argc, char *argv[]) {
   // #### #### #### #### #### #### #### #### #### #### #### #### //
 
   auto tOutput = new TTree("OffT", "T With Offline Recon");
-  auto OffDS = new RAT::DS::Root();
-  tOutput->Branch("OffDS", "RAT::DS::Root", &OffDS);
+  auto BufDS = new RAT::DS::Root();
+  tOutput->Branch("OffDS", "RAT::DS::Root", &BufDS);
 
   if(isVerbose)
 	cout << "Writing recon info into DS object" << endl;
 
   ProgressBar progressBarRecon(nEvts, 70);
 
+  unsigned long nBytes = 0;
+
+  const unsigned long MBSize = 1e6;
+  const unsigned long bufferSize = 100*MBSize;
+
   for(iEvt; iEvt<nEvts; iEvt++){
 
 	// record the tick
 	++progressBarRecon;
 
-	auto fMC = TFile::Open(inputRATName.c_str());
-	auto fMCTree = dynamic_cast<TTree *>(fMC->Get("T"));
-	auto BufDS = new RAT::DS::Root();
-	fMCTree->SetBranchAddress("ds", &BufDS);
-	fMCTree->GetEntry(iEvt);
-
-	fMC->Close();
-	delete fMC;
+	int iBytes = 0;
+	BufDS = GetDS(inputRATName.c_str(), iEvt, &iBytes);
+	nBytes += iBytes;
 
 	AddReconInfo(BufDS,
 				 0,
@@ -116,9 +117,18 @@ int main(int argc, char *argv[]) {
 						 [&](const pair<int, FlatRecon>& p){return p.first == mMCID[iEvt];})->second);
 
 	tOutput->SetBranchAddress("OffDS", &BufDS, nullptr);
-	int errcode = tOutput->Fill();
-	tOutput->SetBranchAddress("OffDS", &OffDS, nullptr);
+	tOutput->Fill();
 
+	if(nBytes > bufferSize){
+
+	  auto OffEVFile = TFile::Open("OffEVFile.root", "UPDATE");
+	  tOutput->Write(nullptr,TObject::kWriteDelete,0);
+	  // delete tOutput;
+	  OffEVFile->Close("R");
+	  delete OffEVFile;
+
+	  nBytes = 0;
+	}
 
 	if(isVerbose)
 	  progressBarRecon.display();
@@ -128,11 +138,10 @@ int main(int argc, char *argv[]) {
   if(isVerbose)
 	progressBarRecon.done();
 
-  // delete fA;
-
-  auto OffEVFile = new TFile("OffEVFile.root", "RECREATE");
-  tOutput->Write();
-  OffEVFile->Close();
+  auto OffEVFile = TFile::Open("OffEVFile.root", "UPDATE");
+  tOutput->Write(nullptr,TObject::kWriteDelete,0);
+  OffEVFile->Close("R");
+  delete OffEVFile;
 
   /////////////////////////
   // ...
